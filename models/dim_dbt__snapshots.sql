@@ -1,7 +1,7 @@
 with
     base as (select * from {{ ref("stg_dbt__snapshots") }}),
 
-    snapshots as (
+    dbt_snapshots as (
 
         select
             snapshot_execution_id,
@@ -27,5 +27,5 @@ with
     )
 
 select *
-from snapshots
+from dbt_snapshots
 

@@ -260,7 +260,6 @@
     {% endif %}
 {% endmacro -%}
 
-
 {% macro trino__get_seed_executions_dml_sql(seeds) -%}
     {% if seeds != [] %}
         {% set seed_execution_values %}
@@ -283,9 +282,9 @@
                 {% if compile_started_at %}TIMESTAMP '{{ compile_started_at }}'{% else %}null{% endif %}, {# compile_started_at #}
                 {% set query_completed_at = (model.timing | selectattr("name", "eq", "execute") | first | default({}))["completed_at"] %}
                 {% if query_completed_at %}TIMESTAMP '{{ query_completed_at }}'{% else %}null{% endif %}, {# query_completed_at #}
-                
+
                 {{ model.execution_time }}, {# total_node_runtime #}
-                
+
                 {% if model.adapter_response.rows_affected is none or model.adapter_response.rows_affected is not defined %}
                     null
                 {% else %}
@@ -304,6 +303,64 @@
         {%- endfor %}
         {% endset %}
         {{ seed_execution_values }}
+    {% else %}
+        {{ return("") }}
+    {% endif %}
+{% endmacro -%}
+
+{% macro dremio__get_seed_executions_dml_sql(models) -%}
+
+    {% if models != [] %}
+        {% set model_values %}
+        {% for model in models -%}
+            (
+                '{{ invocation_id }}', {# command_invocation_id #}
+                '{{ model.node.unique_id }}', {# node_id #}
+                {{ dbt_artifacts.cast_as_timestamp(run_started_at) }}, {# run_started_at #}
+
+                {% set config_full_refresh = model.node.config.full_refresh %}
+                {% if config_full_refresh is none %}
+                    {% set config_full_refresh = flags.FULL_REFRESH %}
+                {% endif %}
+                '{{ config_full_refresh }}', {# was_full_refresh #}
+
+                '{{ model.thread_id }}', {# thread_id #}
+                '{{ model.status }}', {# status #}
+
+                {% if model.timing != [] %}
+                    {% for stage in model.timing if stage.name == "compile" %}
+                        {% if loop.length == 0 %}
+                            null, {# compile_started_at #}
+                        {% else %}
+                            {{ dbt_artifacts.cast_as_timestamp(stage.started_at) }}, {# compile_started_at #}
+                        {% endif %}
+                    {% endfor %}
+
+                    {% for stage in model.timing if stage.name == "execute" %}
+                        {% if loop.length == 0 %}
+                            null, {# query_completed_at #}
+                        {% else %}
+                            {{ dbt_artifacts.cast_as_timestamp(stage.completed_at) }}, {# query_completed_at #}
+                        {% endif %}
+                    {% endfor %}
+                {% else %}
+                    null, {# compile_started_at #}
+                    null, {# query_completed_at #}
+                {% endif %}
+
+                {{ model.execution_time }}, {# total_node_runtime #}
+                null, -- rows_affected not available {# Only available in Snowflake #}
+                '{{ model.node.config.materialized }}', {# materialization #}
+                '{{ model.node.schema }}', {# schema #}
+                '{{ model.node.name }}', {# name #}
+                '{{ model.node.alias }}', {# alias #}
+                '{{ dbt_artifacts.escape_string(model.message) }}', {# message #}
+                '{{ dbt_artifacts.escape_string(tojson(model.adapter_response)) }}' {# adapter_response #}
+            )
+            {%- if not loop.last %},{%- endif %}
+        {%- endfor %}
+        {% endset %}
+        {{ model_values }}
     {% else %}
         {{ return("") }}
     {% endif %}

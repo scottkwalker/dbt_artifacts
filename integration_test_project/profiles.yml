@@ -74,3 +74,14 @@ dbt_artifacts:
       schema: default
       port: 8080
       threads: 8
+    dremio:
+      type: dremio
+      user: "{{ env_var('DBT_ENV_DREMIO_USER') }}"
+      password: "{{ env_var('DBT_ENV_DREMIO_PASSWORD') }}"
+      software_host: "{{ env_var('DBT_ENV_DREMIO_SOFTWARE_HOST') }}"
+      port: 443
+      threads: 8
+      use_ssl: true
+      dremio_space: dbt_artifacts_test_commit_{{ env_var('DBT_VERSION', '') }}_{{ env_var('GITHUB_SHA_OVERRIDE', '') if env_var('GITHUB_SHA_OVERRIDE', '') else env_var('GITHUB_SHA') }}
+      object_storage_path: "{{ env_var('DBT_ENV_OBJECT_STORAGE_PATH') }}"
+      object_storage_source: "{{ env_var('DBT_ENV_OBJECT_STORAGE_SOURCE') }}"

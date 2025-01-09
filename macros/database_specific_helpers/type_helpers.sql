@@ -26,6 +26,10 @@
    json
 {% endmacro %}
 
+{%- macro dremio__type_json() -%}
+   varchar
+{%- endmacro -%}
+
 {#- ARRAY -#}
 
 {% macro type_array() %}
@@ -61,3 +65,7 @@
 {% macro trino__type_numeric() %}
    double
 {% endmacro %}
+
+{%- macro dremio__type_array() -%}
+   varchar
+{%- endmacro -%}
